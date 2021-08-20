@@ -16,6 +16,9 @@ import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 from model import NetworkCIFAR as Network
 
+from pathlib import Path
+from tqdm import tqdm
+import wandb
 
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
@@ -52,7 +55,39 @@ logging.getLogger().addHandler(fh)
 
 CIFAR_CLASSES = 10
 
+def wandb_auth(fname: str = "nas_key.txt"):
+  gdrive_path = "/content/drive/MyDrive/colab/wandb/nas_key.txt"
+  if "WANDB_API_KEY" in os.environ:
+      wandb_key = os.environ["WANDB_API_KEY"]
+  elif os.path.exists(os.path.abspath("~" + os.sep + ".wandb" + os.sep + fname)):
+      # This branch does not seem to work as expected on Paperspace - it gives '/storage/~/.wandb/nas_key.txt'
+      print("Retrieving WANDB key from file")
+      f = open("~" + os.sep + ".wandb" + os.sep + fname, "r")
+      key = f.read().strip()
+      os.environ["WANDB_API_KEY"] = key
+  elif os.path.exists("/root/.wandb/"+fname):
+      print("Retrieving WANDB key from file")
+      f = open("/root/.wandb/"+fname, "r")
+      key = f.read().strip()
+      os.environ["WANDB_API_KEY"] = key
 
+  elif os.path.exists(
+      os.path.expandvars("%userprofile%") + os.sep + ".wandb" + os.sep + fname
+  ):
+      print("Retrieving WANDB key from file")
+      f = open(
+          os.path.expandvars("%userprofile%") + os.sep + ".wandb" + os.sep + fname,
+          "r",
+      )
+      key = f.read().strip()
+      os.environ["WANDB_API_KEY"] = key
+  elif os.path.exists(gdrive_path):
+      print("Retrieving WANDB key from file")
+      f = open(gdrive_path, "r")
+      key = f.read().strip()
+      os.environ["WANDB_API_KEY"] = key
+  wandb.login()
+  
 def main():
   if not torch.cuda.is_available():
     logging.info('no gpu device available')
@@ -70,6 +105,7 @@ def main():
   genotype = eval("genotypes.%s" % args.arch)
   model = Network(args.init_channels, CIFAR_CLASSES, args.layers, args.auxiliary, genotype)
   model = model.cuda()
+  run = wandb.init(project="NAS", group=f"Search_Cell_darts_orig", reinit=True)
 
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
@@ -94,7 +130,7 @@ def main():
 
   scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, float(args.epochs))
 
-  for epoch in range(args.epochs):
+  for epoch in tqdm(range(args.epochs), desc = "Iterating over epochs"):
     scheduler.step()
     logging.info('epoch %d lr %e', epoch, scheduler.get_lr()[0])
     model.drop_path_prob = args.drop_path_prob * epoch / args.epochs
@@ -104,6 +140,8 @@ def main():
 
     valid_acc, valid_obj = infer(valid_queue, model, criterion)
     logging.info('valid_acc %f', valid_acc)
+    
+    wandb.log({"train_acc":train_acc, "train_loss":train_obj, "val_acc":valid_acc, "val_loss":valid_obj})
 
     utils.save(model, os.path.join(args.save, 'weights.pt'))
 
