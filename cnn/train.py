@@ -106,7 +106,7 @@ def main():
   logging.info("Initeg genotype")
   model = Network(args.init_channels, CIFAR_CLASSES, args.layers, args.auxiliary, genotype)
   logging.info("Inited model")
-
+  print(args)
   model = model.cuda()
   logging.info("Sent model to Cuda")
   run = wandb.init(project="NAS", group=f"Search_Cell_darts_orig", reinit=True)
