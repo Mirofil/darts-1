@@ -105,7 +105,7 @@ def main():
   genotype = eval("genotypes.%s" % args.arch)
   model = Network(args.init_channels, CIFAR_CLASSES, args.layers, args.auxiliary, genotype)
   model = model.cuda()
-  run = wandb.init(project="NAS", group=f"Search_Cell_darts_orig", reinit=True)
+  # run = wandb.init(project="NAS", group=f"Search_Cell_darts_orig", reinit=True)
 
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
@@ -141,7 +141,7 @@ def main():
     valid_acc, valid_obj = infer(valid_queue, model, criterion)
     logging.info('valid_acc %f', valid_acc)
     
-    wandb.log({"train_acc":train_acc, "train_loss":train_obj, "val_acc":valid_acc, "val_loss":valid_obj})
+    # wandb.log({"train_acc":train_acc, "train_loss":train_obj, "val_acc":valid_acc, "val_loss":valid_obj})
 
     utils.save(model, os.path.join(args.save, 'weights.pt'))
 
