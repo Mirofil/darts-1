@@ -109,7 +109,7 @@ def main():
 
   model = model.cuda()
   logging.info("Sent model to Cuda")
-  # run = wandb.init(project="NAS", group=f"Search_Cell_darts_orig", reinit=True)
+  run = wandb.init(project="NAS", group=f"Search_Cell_darts_orig", reinit=True)
 
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
